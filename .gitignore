@@ -12,4 +12,9 @@ secrets.json
 node_modules/
 dist/
 build/
+# Ignorar configs do projeto atualizados pelo Antigravity
+__pycache__/
+*.pyc
+.venv/
+.env
 .DS_Store

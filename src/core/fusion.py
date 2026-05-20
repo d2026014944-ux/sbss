@@ -6,42 +6,50 @@ Duas camadas de fusão:
   2. full_fusion()     — fusão matricial completa via hyperbitnet_matrix_fusion.
 """
 
+from __future__ import annotations
+
 from typing import List
 
-import numpy as np
+from core.hyperbitnet import HyperBitnet
 
-from .hyperbitnet import (
-    HyperBitnet,
-    bitnet_efficient_matrix,
-    hyperbitnet_matrix_fusion,
-)
+# Advanced mode check
+try:
+    import numpy as np
+
+    _HAS_NUMPY = True
+except ImportError:
+    _HAS_NUMPY = False
 
 
 def fusion_vector(
-    classical_states: List[int],
+    states: List[float],
     quantum_states: List[float],
 ) -> List[float]:
     """
-    Fusão leve para uso no loop de tempo-real.
+    Fuse classical and quantum-inspired node states into a single intent vector.
 
-    Combina estados clássicos (discretos) com estados quânticos (contínuos)
-    usando média ponderada 50/50. Retorna lista de floats prontos para o
-    tribe_adapter.
+    Each output element is the arithmetic mean of the corresponding classical
+    and quantum state, keeping values in [0, 1].
     """
-    fused: List[float] = []
-    for state, q_state in zip(classical_states, quantum_states):
-        fused.append(float(state) * 0.5 + q_state * 0.5)
-    return fused if fused else list(quantum_states)
+    if not states and not quantum_states:
+        return []
+    return [(float(s) + float(q)) / 2.0 for s, q in zip(states, quantum_states)]
 
 
-def full_fusion(hbn: HyperBitnet) -> np.ndarray:
+def full_fusion(hbn: HyperBitnet):
     """
-    Fusão matricial completa.
+    Full matrix fusion using BitNet 1.58b efficient matrix.
 
-    Gera a BitNet Efficient Matrix com tamanho correspondente aos nós
-    do grafo e aplica hyperbitnet_matrix_fusion para produzir a matriz
-    de resultado final.
+    Generates the BitNet Efficient Matrix sized to the graph's nodes
+    and applies hyperbitnet_matrix_fusion for the final result matrix.
+
+    Requires numpy/networkx/scipy.
     """
-    num_nodes = len(hbn.graph.nodes())
+    if not _HAS_NUMPY:
+        raise RuntimeError("full_fusion requires numpy/networkx/scipy")
+
+    from core.hyperbitnet import bitnet_efficient_matrix, hyperbitnet_matrix_fusion
+
+    num_nodes = hbn.n_nodes
     bit_matrix = bitnet_efficient_matrix(num_nodes)
     return hyperbitnet_matrix_fusion(hbn, bit_matrix)
